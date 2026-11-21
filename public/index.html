@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Panel Guru</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: auto; padding: 16px; }
+    section { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 16px 0; }
+    textarea, input, select { width: 100%; margin: 6px 0 12px; padding: 8px; box-sizing: border-box; }
+    button { padding: 10px 16px; cursor: pointer; }
+    #out { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Panel Guru</h1>
+
+  <section>
+    <h2>1. Selfie kehadiran</h2>
+    <p>Hantar antara 07:20 hingga 08:00 pada hari bekerja.</p>
+    <input id="selfie" type="file" accept="image/*" capture="user">
+    <button onclick="hantarSelfie()">Hantar selfie</button>
+  </section>
+
+  <section>
+    <h2>2. RPH mingguan</h2>
+    <label>Tarikh Isnin minggu ini</label>
+    <input id="minggu" type="date">
+    <label>Jadual waktu (satu baris satu kelas)</label>
+    <textarea id="jadual" rows="8" placeholder="ISNIN | 08:20 | 4Z | Bahasa Melayu"></textarea>
+    <label>Refleksi</label>
+    <textarea id="refleksi" rows="4"></textarea>
+    <label>Contoh format RPH (pilihan)</label>
+    <textarea id="sampel" rows="4"></textarea>
+    <button onclick="janaRph()">Jana RPH PDF</button>
+  </section>
+
+  <section>
+    <h2>3. PLC / OPR</h2>
+    <label>Jenis</label>
+    <select id="jenis"><option>PLC</option><option>OPR</option></select>
+    <label>Maklumat aktiviti (fakta sahaja)</label>
+    <textarea id="maklumat" rows="6"></textarea>
+    <label>Contoh gaya (pilihan)</label>
+    <textarea id="contoh" rows="4"></textarea>
+    <button onclick="janaDokumen()">Jana PDF</button>
+  </section>
+
+  <div id="out"></div>
+
+<script>
+  const out = document.getElementById("out");
+  const msg = (t) => out.replaceChildren(document.createTextNode(t));
+  const link = (label, href) => {
+    const a = document.createElement("a");
+    a.href = href; a.target = "_blank"; a.textContent = label;
+    const p = document.createElement("p"); p.appendChild(a);
+    out.appendChild(p);
+  };
+  const postJson = (url, body) => fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  async function hantarSelfie() {
+    const f = document.getElementById("selfie").files[0];
+    if (!f) return msg("Sila pilih gambar.");
+    const fd = new FormData();
+    fd.append("selfie", f);
+    msg("Menyemak selfie...");
+    const r = await fetch("/api/selfie", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) return msg(j.error);
+    msg(`Status: ${j.status}. ${j.catatan}`);
+    link("Lihat gambar dalam Drive", j.imageLink);
+    link("Buka laporan kehadiran PDF", j.pdfLink);
+  }
+
+  async function janaRph() {
+    msg("Menjana RPH... (boleh ambil masa 30 saat)");
+    const r = await postJson("/api/rph", {
+      minggu: document.getElementById("minggu").value,
+      jadual: document.getElementById("jadual").value,
+      refleksi: document.getElementById("refleksi").value,
+      sampel: document.getElementById("sampel").value,
+    });
+    const j = await r.json();
+    if (!r.ok) return msg(j.error);
+    msg(`${j.jumlah} entri RPH dijana.`);
+    link("Buka RPH PDF", j.pdfLink);
+  }
+
+  async function janaDokumen() {
+    msg("Menjana dokumen...");
+    const r = await postJson("/api/dokumen", {
+      jenis: document.getElementById("jenis").value,
+      maklumat: document.getElementById("maklumat").value,
+      contoh: document.getElementById("contoh").value,
+    });
+    const j = await r.json();
+    if (!r.ok) return msg(j.error);
+    msg("Dokumen dijana dan disimpan dalam Drive.");
+    link("Buka PDF", j.pdfLink);
+  }
+</script>
+</body>
+</html>
