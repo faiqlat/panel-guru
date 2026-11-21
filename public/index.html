@@ -10,99 +10,161 @@
     textarea, input, select { width: 100%; margin: 6px 0 12px; padding: 8px; box-sizing: border-box; }
     button { padding: 10px 16px; cursor: pointer; }
     #out { margin-top: 16px; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <h1>Panel Guru</h1>
 
-  <section>
-    <h2>1. Selfie kehadiran</h2>
-    <p>Hantar antara 07:20 hingga 08:00 pada hari bekerja.</p>
-    <input id="selfie" type="file" accept="image/*" capture="user">
-    <button onclick="hantarSelfie()">Hantar selfie</button>
+  <section id="login">
+    <h2>Log masuk</h2>
+    <input id="kata" type="password" placeholder="Kata laluan">
+    <button onclick="logMasuk()">Log masuk</button>
+    <p id="login-msg"></p>
   </section>
 
-  <section>
-    <h2>2. RPH mingguan</h2>
-    <label>Tarikh Isnin minggu ini</label>
-    <input id="minggu" type="date">
-    <label>Jadual waktu (satu baris satu kelas)</label>
-    <textarea id="jadual" rows="8" placeholder="ISNIN | 08:20 | 4Z | Bahasa Melayu"></textarea>
-    <label>Refleksi</label>
-    <textarea id="refleksi" rows="4"></textarea>
-    <label>Contoh format RPH (pilihan)</label>
-    <textarea id="sampel" rows="4"></textarea>
-    <button onclick="janaRph()">Jana RPH PDF</button>
-  </section>
+  <div id="app" hidden>
+    <button onclick="logKeluar()">Log keluar</button>
 
-  <section>
-    <h2>3. PLC / OPR</h2>
-    <label>Jenis</label>
-    <select id="jenis"><option>PLC</option><option>OPR</option></select>
-    <label>Maklumat aktiviti (fakta sahaja)</label>
-    <textarea id="maklumat" rows="6"></textarea>
-    <label>Contoh gaya (pilihan)</label>
-    <textarea id="contoh" rows="4"></textarea>
-    <button onclick="janaDokumen()">Jana PDF</button>
-  </section>
+    <section>
+      <h2>1. Selfie kehadiran</h2>
+      <p>Hantar antara 07:20 hingga 08:00 pada hari bekerja.</p>
+      <input id="selfie" type="file" accept="image/*" capture="user">
+      <button onclick="hantarSelfie()">Hantar selfie</button>
+    </section>
 
-  <div id="out"></div>
+    <section>
+      <h2>2. RPH mingguan</h2>
+      <label>Tarikh Isnin minggu ini</label>
+      <input id="minggu" type="date">
+      <label>Jadual waktu (satu baris satu kelas)</label>
+      <textarea id="jadual" rows="8" placeholder="ISNIN | 08:20 | 4Z | Bahasa Melayu"></textarea>
+      <label>Refleksi</label>
+      <textarea id="refleksi" rows="4"></textarea>
+      <label>Contoh format RPH (pilihan)</label>
+      <textarea id="sampel" rows="4"></textarea>
+      <button onclick="janaRph()">Jana RPH PDF</button>
+    </section>
+
+    <section>
+      <h2>3. PLC / OPR</h2>
+      <label>Jenis</label>
+      <select id="jenis"><option>PLC</option><option>OPR</option></select>
+      <label>Maklumat aktiviti (fakta sahaja)</label>
+      <textarea id="maklumat" rows="6"></textarea>
+      <label>Contoh gaya (pilihan)</label>
+      <textarea id="contoh" rows="4"></textarea>
+      <button onclick="janaDokumen()">Jana PDF</button>
+    </section>
+
+    <div id="out"></div>
+  </div>
 
 <script>
-  const out = document.getElementById("out");
+  const $ = (id) => document.getElementById(id);
+  const out = $("out");
   const msg = (t) => out.replaceChildren(document.createTextNode(t));
-  const link = (label, href) => {
+  const pautan = (label, href) => {
     const a = document.createElement("a");
     a.href = href; a.target = "_blank"; a.textContent = label;
     const p = document.createElement("p"); p.appendChild(a);
     out.appendChild(p);
   };
-  const postJson = (url, body) => fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+
+  // Tunjuk skrin log masuk atau app
+  function tunjuk(logged) {
+    $("login").hidden = logged;
+    $("app").hidden = !logged;
+  }
+
+  // Jika server kata belum log masuk (401), tunjuk skrin log masuk
+  async function api(url, opts = {}) {
+    const r = await fetch(url, opts);
+    if (r.status === 401) {
+      tunjuk(false);
+      $("login-msg").textContent = "Sila log masuk dahulu.";
+      throw new Error("401");
+    }
+    return r;
+  }
+
+  async function jalankan(fn) {
+    try { await fn(); } catch (e) { if (e.message !== "401") msg(e.message); }
+  }
+
+  async function hantarJson(url, body) {
+    const r = await api(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Ralat berlaku.");
+    return j;
+  }
+
+  async function logMasuk() {
+    const r = await fetch("/api/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password: $("kata").value }),
+    });
+    if (!r.ok) { $("login-msg").textContent = "Kata laluan salah."; return; }
+    $("kata").value = "";
+    $("login-msg").textContent = "";
+    tunjuk(true);
+  }
+
+  async function logKeluar() {
+    await fetch("/api/login", { method: "DELETE" });
+    tunjuk(false);
+    $("login-msg").textContent = "Anda sudah log keluar.";
+  }
 
   async function hantarSelfie() {
-    const f = document.getElementById("selfie").files[0];
-    if (!f) return msg("Sila pilih gambar.");
-    const fd = new FormData();
-    fd.append("selfie", f);
-    msg("Menyemak selfie...");
-    const r = await fetch("/api/selfie", { method: "POST", body: fd });
-    const j = await r.json();
-    if (!r.ok) return msg(j.error);
-    msg(`Status: ${j.status}. ${j.catatan}`);
-    link("Lihat gambar dalam Drive", j.imageLink);
-    link("Buka laporan kehadiran PDF", j.pdfLink);
+    await jalankan(async () => {
+      const f = $("selfie").files[0];
+      if (!f) return msg("Sila pilih gambar.");
+      const fd = new FormData();
+      fd.append("selfie", f);
+      msg("Menyemak selfie...");
+      const r = await api("/api/selfie", { method: "POST", body: fd });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      msg(`Status: ${j.status}. ${j.catatan}`);
+      pautan("Lihat gambar dalam Drive", j.imageLink);
+      pautan("Buka laporan kehadiran PDF", j.pdfLink);
+    });
   }
 
   async function janaRph() {
-    msg("Menjana RPH... (boleh ambil masa 30 saat)");
-    const r = await postJson("/api/rph", {
-      minggu: document.getElementById("minggu").value,
-      jadual: document.getElementById("jadual").value,
-      refleksi: document.getElementById("refleksi").value,
-      sampel: document.getElementById("sampel").value,
+    await jalankan(async () => {
+      msg("Menjana RPH... (boleh ambil masa 30 saat)");
+      const j = await hantarJson("/api/rph", {
+        minggu: $("minggu").value,
+        jadual: $("jadual").value,
+        refleksi: $("refleksi").value,
+        sampel: $("sampel").value,
+      });
+      msg(`${j.jumlah} entri RPH dijana.`);
+      pautan("Buka RPH PDF", j.pdfLink);
     });
-    const j = await r.json();
-    if (!r.ok) return msg(j.error);
-    msg(`${j.jumlah} entri RPH dijana.`);
-    link("Buka RPH PDF", j.pdfLink);
   }
 
   async function janaDokumen() {
-    msg("Menjana dokumen...");
-    const r = await postJson("/api/dokumen", {
-      jenis: document.getElementById("jenis").value,
-      maklumat: document.getElementById("maklumat").value,
-      contoh: document.getElementById("contoh").value,
+    await jalankan(async () => {
+      msg("Menjana dokumen...");
+      const j = await hantarJson("/api/dokumen", {
+        jenis: $("jenis").value,
+        maklumat: $("maklumat").value,
+        contoh: $("contoh").value,
+      });
+      msg("Dokumen dijana dan disimpan dalam Drive.");
+      pautan("Buka PDF", j.pdfLink);
     });
-    const j = await r.json();
-    if (!r.ok) return msg(j.error);
-    msg("Dokumen dijana dan disimpan dalam Drive.");
-    link("Buka PDF", j.pdfLink);
   }
+
+  tunjuk(false);
 </script>
 </body>
 </html>
