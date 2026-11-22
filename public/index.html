@@ -1,170 +1,416 @@
 <!doctype html>
 <html lang="ms">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Panel Guru</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: auto; padding: 16px; }
-    section { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 16px 0; }
-    textarea, input, select { width: 100%; margin: 6px 0 12px; padding: 8px; box-sizing: border-box; }
-    button { padding: 10px 16px; cursor: pointer; }
-    #out { margin-top: 16px; }
-    [hidden] { display: none !important; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Panel Guru</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#6b7280;--line:#e5e7eb;--brand:#0f766e;--brand-2:#14b8a6;--warn:#b45309;--ok:#15803d;--bad:#b91c1c;--side:#fff;--radius:14px}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1115;--card:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#262c36;--side:#11151b}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#login{min-height:100%;display:grid;place-items:center;padding:24px}
+.login-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;margin-bottom:18px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;color:#fff;font-weight:800}
+#app{display:grid;grid-template-columns:240px 1fr;min-height:100%}
+aside{background:var(--side);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:10px;color:var(--muted)}
+.nav-btn:hover{background:var(--bg)}
+.nav-btn.active{background:var(--bg);color:var(--text);font-weight:600;box-shadow:inset 3px 0 0 var(--brand)}
+.nav-ico{width:20px;text-align:center}
+.side-foot{margin-top:auto;padding:10px 12px}
+main{padding:24px;max-width:1100px;width:100%}
+.topbar{display:none;align-items:center;justify-content:space-between;margin-bottom:16px}
+.menu-btn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.card h2{font-size:16px;margin:0 0 10px}
+.stat{font-size:28px;font-weight:700;margin:4px 0}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
+.btn.ghost{background:none;color:var(--text);border:1px solid var(--line)}
+.btn:disabled{opacity:.6}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0 14px}
+textarea{resize:vertical}
+label{font-size:13px;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted)}
+.msg{margin-top:12px;padding:12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);white-space:pre-wrap}
+.msg.err{border-color:#fecaca;background:#fef2f2;color:var(--bad)}
+.links a{display:inline-block;margin:4px 12px 4px 0;color:var(--brand);font-weight:600}
+.list{list-style:none;padding:0;margin:0}
+.list li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:9}
+.overlay.open{display:block}
+@media (max-width:820px){
+  #app{grid-template-columns:1fr}
+  aside{position:fixed;left:0;top:0;bottom:0;width:260px;transform:translateX(-100%);transition:transform .2s;z-index:10;height:100%}
+  aside.open{transform:none}
+  .topbar{display:flex}
+  main{padding:16px}
+}
+</style>
 </head>
 <body>
-  <h1>Panel Guru</h1>
 
-  <section id="login">
-    <h2>Log masuk</h2>
-    <input id="kata" type="password" placeholder="Kata laluan">
-    <button onclick="logMasuk()">Log masuk</button>
-    <p id="login-msg"></p>
-  </section>
-
-  <div id="app" hidden>
-    <button onclick="logKeluar()">Log keluar</button>
-
-    <section>
-      <h2>1. Selfie kehadiran</h2>
-      <p>Hantar antara 07:20 hingga 08:00 pada hari bekerja.</p>
-      <input id="selfie" type="file" accept="image/*" capture="user">
-      <button onclick="hantarSelfie()">Hantar selfie</button>
-    </section>
-
-    <section>
-      <h2>2. RPH mingguan</h2>
-      <label>Tarikh Isnin minggu ini</label>
-      <input id="minggu" type="date">
-      <label>Jadual waktu (satu baris satu kelas)</label>
-      <textarea id="jadual" rows="8" placeholder="ISNIN | 08:20 | 4Z | Bahasa Melayu"></textarea>
-      <label>Refleksi</label>
-      <textarea id="refleksi" rows="4"></textarea>
-      <label>Contoh format RPH (pilihan)</label>
-      <textarea id="sampel" rows="4"></textarea>
-      <button onclick="janaRph()">Jana RPH PDF</button>
-    </section>
-
-    <section>
-      <h2>3. PLC / OPR</h2>
-      <label>Jenis</label>
-      <select id="jenis"><option>PLC</option><option>OPR</option></select>
-      <label>Maklumat aktiviti (fakta sahaja)</label>
-      <textarea id="maklumat" rows="6"></textarea>
-      <label>Contoh gaya (pilihan)</label>
-      <textarea id="contoh" rows="4"></textarea>
-      <button onclick="janaDokumen()">Jana PDF</button>
-    </section>
-
-    <div id="out"></div>
+<section id="login">
+  <div class="login-card">
+    <div class="brand"><div class="logo">PG</div>Panel Guru</div>
+    <label for="kata">Kata laluan</label>
+    <input id="kata" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')logMasuk()">
+    <button class="btn" style="width:100%" onclick="logMasuk()">Log masuk</button>
+    <div id="login-msg" class="note" style="margin-top:12px"></div>
   </div>
+</section>
+
+<div id="app" hidden>
+  <aside id="side">
+    <div class="brand"><div class="logo">PG</div>Panel Guru</div>
+    <button class="nav-btn active" data-view="utama"><span class="nav-ico">⌂</span>Utama</button>
+    <button class="nav-btn" data-view="kehadiran"><span class="nav-ico">◉</span>Kehadiran</button>
+    <button class="nav-btn" data-view="rph"><span class="nav-ico">▤</span>RPH</button>
+    <button class="nav-btn" data-view="dokumen"><span class="nav-ico">▦</span>PLC / OPR</button>
+    <button class="nav-btn" data-view="hasil"><span class="nav-ico">⤓</span>Hasil PDF</button>
+    <div class="side-foot">
+      <button class="btn ghost" style="width:100%" onclick="logKeluar()">Log keluar</button>
+    </div>
+  </aside>
+  <div id="overlay" class="overlay" onclick="tutupMenu()"></div>
+
+  <main>
+    <div class="topbar">
+      <button class="menu-btn" onclick="bukaMenu()">☰</button>
+      <span class="note" id="tarikh-kecil"></span>
+    </div>
+
+    <div class="view" id="v-utama">
+      <h1>Utama</h1>
+      <p class="sub" id="salam"></p>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Kehadiran hari ini</div>
+          <div id="st-selfie" class="stat">–</div>
+          <p class="note" id="st-selfie-note">Belum hantar selfie.</p>
+        </div>
+        <div class="card">
+          <div class="label">RPH minggu ini</div>
+          <div id="st-rph" class="stat">–</div>
+          <p class="note" id="st-rph-note">Belum dijana.</p>
+        </div>
+        <div class="card">
+          <div class="label">Dokumen dijana</div>
+          <div id="st-dok" class="stat">0</div>
+          <p class="note">PDF yang dijana dari pelayar ini.</p>
+        </div>
+        <div class="card">
+          <div class="label">Masa sekarang</div>
+          <div id="st-masa" class="stat">–</div>
+          <p class="note">Waktu Malaysia (UTC+8)</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h2>Pintasan</h2>
+        <div class="row">
+          <button class="btn" onclick="tukar('kehadiran')">Hantar selfie</button>
+          <button class="btn" onclick="tukar('rph')">Jana RPH</button>
+          <button class="btn" onclick="tukar('dokumen')">Jana PLC / OPR</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="v-kehadiran" hidden>
+      <h1>Kehadiran</h1>
+      <p class="sub">Hantar selfie antara 07:20 hingga 08:00 pada hari bekerja.</p>
+      <div class="card">
+        <label for="selfie">Ambil gambar selfie</label>
+        <input id="selfie" type="file" accept="image/*" capture="user">
+        <div class="row"><button id="btn-selfie" class="btn" onclick="hantarSelfie()">Hantar selfie</button></div>
+        <div id="msg-selfie" class="msg" hidden></div>
+        <div id="links-selfie" class="links"></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-rph" hidden>
+      <h1>RPH mingguan</h1>
+      <p class="sub">Tampal jadual minggu ini, kemudian jana RPH untuk semua kelas.</p>
+      <div class="card">
+        <label for="minggu">Tarikh Isnin minggu ini</label>
+        <input id="minggu" type="date">
+        <label for="jadual">Jadual waktu (satu baris satu kelas)</label>
+        <textarea id="jadual" rows="8" placeholder="ISNIN | 08:20 | 4Z | Bahasa Melayu"></textarea>
+        <label for="refleksi">Refleksi</label>
+        <textarea id="refleksi" rows="4"></textarea>
+        <label for="sampel">Contoh format RPH (pilihan)</label>
+        <textarea id="sampel" rows="4"></textarea>
+        <div class="row"><button id="btn-rph" class="btn" onclick="janaRph()">Jana RPH PDF</button></div>
+        <div id="msg-rph" class="msg" hidden></div>
+        <div id="links-rph" class="links"></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-dokumen" hidden>
+      <h1>PLC / OPR</h1>
+      <p class="sub">Tulis fakta sahaja. AI tidak akan mereka data atau angka.</p>
+      <div class="card">
+        <label for="jenis">Jenis</label>
+        <select id="jenis"><option>PLC</option><option>OPR</option></select>
+        <label for="maklumat">Maklumat aktiviti</label>
+        <textarea id="maklumat" rows="6"></textarea>
+        <label for="contoh">Contoh gaya (pilihan)</label>
+        <textarea id="contoh" rows="4"></textarea>
+        <div class="row"><button id="btn-dok" class="btn" onclick="janaDokumen()">Jana PDF</button></div>
+        <div id="msg-dok" class="msg" hidden></div>
+        <div id="links-dok" class="links"></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-hasil" hidden>
+      <h1>Hasil PDF</h1>
+      <p class="sub">Senarai PDF yang dijana dari pelayar ini.</p>
+      <div class="card">
+        <ul id="senarai" class="list"></ul>
+        <p id="kosong" class="note" hidden>Belum ada PDF dijana.</p>
+      </div>
+    </div>
+  </main>
+</div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  const out = $("out");
-  const msg = (t) => out.replaceChildren(document.createTextNode(t));
-  const pautan = (label, href) => {
+const $ = (id) => document.getElementById(id);
+const KEY = "panel-guru-hasil";
+
+function klNow() { return new Date(Date.now() + 8 * 3600e3); }
+function tarikhKl() { return klNow().toISOString().slice(0, 10); }
+function masaKl() { return klNow().toISOString().slice(11, 16); }
+function salam() {
+  const h = klNow().getUTCHours();
+  return h < 12 ? "Selamat pagi" : h < 18 ? "Selamat tengah hari" : "Selamat petang";
+}
+
+function simpanHasil(item) {
+  const list = JSON.parse(localStorage.getItem(KEY) || "[]");
+  list.unshift({ ...item, masa: new Date().toISOString() });
+  localStorage.setItem(KEY, JSON.stringify(list.slice(0, 100)));
+}
+
+function setMsg(id, text, err = false) {
+  const el = $(id);
+  el.hidden = false;
+  el.textContent = text;
+  el.classList.toggle("err", err);
+}
+
+function setPautan(id, items) {
+  const box = $(id);
+  box.replaceChildren();
+  for (const [label, href] of items) {
     const a = document.createElement("a");
-    a.href = href; a.target = "_blank"; a.textContent = label;
-    const p = document.createElement("p"); p.appendChild(a);
-    out.appendChild(p);
-  };
-
-  // Tunjuk skrin log masuk atau app
-  function tunjuk(logged) {
-    $("login").hidden = logged;
-    $("app").hidden = !logged;
+    a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = label;
+    box.appendChild(a);
   }
+}
 
-  // Jika server kata belum log masuk (401), tunjuk skrin log masuk
-  async function api(url, opts = {}) {
-    const r = await fetch(url, opts);
-    if (r.status === 401) {
-      tunjuk(false);
-      $("login-msg").textContent = "Sila log masuk dahulu.";
-      throw new Error("401");
-    }
-    return r;
+function sedangJalan(btnId, teks) {
+  const b = $(btnId);
+  b.disabled = true;
+  b.dataset.teks = b.textContent;
+  b.textContent = teks;
+}
+function siap(btnId) {
+  const b = $(btnId);
+  b.disabled = false;
+  b.textContent = b.dataset.teks || b.textContent;
+}
+
+async function api(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    tunjukLogin();
+    throw new Error("Sila log masuk dahulu.");
   }
+  return r;
+}
+async function hantarJson(url, body) {
+  const r = await api(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Ralat berlaku.");
+  return j;
+}
 
-  async function jalankan(fn) {
-    try { await fn(); } catch (e) { if (e.message !== "401") msg(e.message); }
+function tunjukLogin() {
+  $("login").hidden = false;
+  $("app").hidden = true;
+}
+function tunjukApp() {
+  $("login").hidden = true;
+  $("app").hidden = false;
+  salamDashboard();
+  paparHasil();
+}
+async function logMasuk() {
+  const r = await fetch("/api/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ password: $("kata").value }),
+  });
+  if (!r.ok) {
+    $("login-msg").textContent = "Kata laluan salah.";
+    return;
   }
+  $("kata").value = "";
+  $("login-msg").textContent = "";
+  tunjukApp();
+}
+async function logKeluar() {
+  await fetch("/api/login", { method: "DELETE" });
+  tunjukLogin();
+  $("login-msg").textContent = "Anda sudah log keluar.";
+}
 
-  async function hantarJson(url, body) {
-    const r = await api(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
+function tukar(view) {
+  document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "v-" + view));
+  document.querySelectorAll(".nav-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === view));
+  if (view === "hasil") paparHasil();
+  tutupMenu();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".nav-btn").forEach((b) =>
+  b.addEventListener("click", () => tukar(b.dataset.view)));
+
+function bukaMenu() {
+  $("side").classList.add("open");
+  $("overlay").classList.add("open");
+}
+function tutupMenu() {
+  $("side").classList.remove("open");
+  $("overlay").classList.remove("open");
+}
+
+function salamDashboard() {
+  $("salam").textContent = `${salam()}, Mohd Faiq.`;
+  $("tarikh-kecil").textContent = tarikhKl();
+  $("st-masa").textContent = masaKl();
+  const selfie = JSON.parse(localStorage.getItem("panel-guru-selfie") || "null");
+  const hariIni = selfie && selfie.tarikh === tarikhKl();
+  $("st-selfie").textContent = hariIni ? "Dihantar" : "Belum";
+  $("st-selfie-note").textContent = hariIni
+    ? `Dihantar pada ${selfie.masa}. Status: ${selfie.status}.`
+    : "Belum hantar selfie hari ini.";
+  const rph = JSON.parse(localStorage.getItem("panel-guru-rph") || "null");
+  $("st-rph").textContent = rph ? `${rph.jumlah} kelas` : "–";
+  $("st-rph-note").textContent = rph ? `Minggu ${rph.minggu}` : "Belum dijana.";
+  $("st-dok").textContent = String(JSON.parse(localStorage.getItem(KEY) || "[]").length);
+}
+
+function paparHasil() {
+  const list = JSON.parse(localStorage.getItem(KEY) || "[]");
+  const ul = $("senarai");
+  ul.replaceChildren();
+  $("kosong").hidden = list.length > 0;
+  for (const h of list) {
+    const li = document.createElement("li");
+    const kiri = document.createElement("div");
+    const t = document.createElement("div");
+    t.textContent = h.tajuk;
+    const s = document.createElement("div");
+    s.className = "note";
+    s.textContent = `${h.jenis} · ${new Date(h.masa).toLocaleString("ms-MY")}`;
+    kiri.append(t, s);
+    const a = document.createElement("a");
+    a.href = h.pdfLink; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = "Buka";
+    a.style.color = "var(--brand)";
+    a.style.fontWeight = "600";
+    li.append(kiri, a);
+    ul.appendChild(li);
+  }
+  $("st-dok").textContent = String(list.length);
+}
+
+async function hantarSelfie() {
+  const f = $("selfie").files[0];
+  if (!f) return setMsg("msg-selfie", "Sila pilih gambar.", true);
+  sedangJalan("btn-selfie", "Menyemak...");
+  try {
+    const fd = new FormData();
+    fd.append("selfie", f);
+    const r = await api("/api/selfie", { method: "POST", body: fd });
     const j = await r.json();
-    if (!r.ok) throw new Error(j.error || "Ralat berlaku.");
-    return j;
+    if (!r.ok) throw new Error(j.error);
+    setMsg("msg-selfie", `Status: ${j.status}. ${j.catatan}`);
+    setPautan("links-selfie", [["Gambar dalam Drive", j.imageLink], ["Laporan kehadiran PDF", j.pdfLink]]);
+    localStorage.setItem("panel-guru-selfie", JSON.stringify({
+      tarikh: tarikhKl(), masa: masaKl(), status: j.status,
+    }));
+    simpanHasil({ tajuk: "Laporan kehadiran", jenis: "Kehadiran", pdfLink: j.pdfLink });
+  } catch (e) {
+    if (e.message) setMsg("msg-selfie", e.message, true);
+  } finally {
+    siap("btn-selfie");
   }
+}
 
-  async function logMasuk() {
-    const r = await fetch("/api/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password: $("kata").value }),
+async function janaRph() {
+  sedangJalan("btn-rph", "Menjana... (30 saat)");
+  try {
+    const minggu = $("minggu").value;
+    const j = await hantarJson("/api/rph", {
+      minggu,
+      jadual: $("jadual").value,
+      refleksi: $("refleksi").value,
+      sampel: $("sampel").value,
     });
-    if (!r.ok) { $("login-msg").textContent = "Kata laluan salah."; return; }
-    $("kata").value = "";
-    $("login-msg").textContent = "";
-    tunjuk(true);
+    setMsg("msg-rph", `${j.jumlah} entri RPH dijana.`);
+    setPautan("links-rph", [["Buka RPH PDF", j.pdfLink]]);
+    localStorage.setItem("panel-guru-rph", JSON.stringify({ minggu, jumlah: j.jumlah }));
+    simpanHasil({ tajuk: `RPH minggu ${minggu}`, jenis: "RPH", pdfLink: j.pdfLink });
+  } catch (e) {
+    if (e.message) setMsg("msg-rph", e.message, true);
+  } finally {
+    siap("btn-rph");
   }
+}
 
-  async function logKeluar() {
-    await fetch("/api/login", { method: "DELETE" });
-    tunjuk(false);
-    $("login-msg").textContent = "Anda sudah log keluar.";
-  }
-
-  async function hantarSelfie() {
-    await jalankan(async () => {
-      const f = $("selfie").files[0];
-      if (!f) return msg("Sila pilih gambar.");
-      const fd = new FormData();
-      fd.append("selfie", f);
-      msg("Menyemak selfie...");
-      const r = await api("/api/selfie", { method: "POST", body: fd });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error);
-      msg(`Status: ${j.status}. ${j.catatan}`);
-      pautan("Lihat gambar dalam Drive", j.imageLink);
-      pautan("Buka laporan kehadiran PDF", j.pdfLink);
+async function janaDokumen() {
+  sedangJalan("btn-dok", "Menjana...");
+  try {
+    const jenis = $("jenis").value;
+    const j = await hantarJson("/api/dokumen", {
+      jenis,
+      maklumat: $("maklumat").value,
+      contoh: $("contoh").value,
     });
+    setMsg("msg-dok", "Dokumen dijana dan disimpan dalam Drive.");
+    setPautan("links-dok", [["Buka PDF", j.pdfLink]]);
+    simpanHasil({ tajuk: `${jenis} ${tarikhKl()}`, jenis, pdfLink: j.pdfLink });
+  } catch (e) {
+    if (e.message) setMsg("msg-dok", e.message, true);
+  } finally {
+    siap("btn-dok");
   }
+}
 
-  async function janaRph() {
-    await jalankan(async () => {
-      msg("Menjana RPH... (boleh ambil masa 30 saat)");
-      const j = await hantarJson("/api/rph", {
-        minggu: $("minggu").value,
-        jadual: $("jadual").value,
-        refleksi: $("refleksi").value,
-        sampel: $("sampel").value,
-      });
-      msg(`${j.jumlah} entri RPH dijana.`);
-      pautan("Buka RPH PDF", j.pdfLink);
-    });
-  }
-
-  async function janaDokumen() {
-    await jalankan(async () => {
-      msg("Menjana dokumen...");
-      const j = await hantarJson("/api/dokumen", {
-        jenis: $("jenis").value,
-        maklumat: $("maklumat").value,
-        contoh: $("contoh").value,
-      });
-      msg("Dokumen dijana dan disimpan dalam Drive.");
-      pautan("Buka PDF", j.pdfLink);
-    });
-  }
-
-  tunjuk(false);
+// Semak sesi bila halaman dibuka: 401 = belum log masuk
+async function mula() {
+  const r = await fetch("/api/rph");
+  if (r.status === 401) tunjukLogin();
+  else tunjukApp();
+}
+mula();
 </script>
 </body>
 </html>
